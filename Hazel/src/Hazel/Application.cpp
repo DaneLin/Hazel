@@ -14,26 +14,6 @@ namespace Hazel {
 
 	Application* Application::s_Instance = nullptr;
 
-	static GLenum ShaderDataTypeToOpenGLBaseType(ShaderDataType type)
-	{
-		switch (type)
-		{
-			case ShaderDataType::Float:     return GL_FLOAT;
-			case ShaderDataType::Float2:    return GL_FLOAT;
-			case ShaderDataType::Float3:    return GL_FLOAT;
-			case ShaderDataType::Float4:    return GL_FLOAT;
-			case ShaderDataType::Mat3:      return GL_FLOAT;
-			case ShaderDataType::Mat4:      return GL_FLOAT;
-			case ShaderDataType::Int:       return GL_INT;
-			case ShaderDataType::Int2:      return GL_INT;
-			case ShaderDataType::Int3:      return GL_INT;
-			case ShaderDataType::Int4:      return GL_INT;
-			case ShaderDataType::Bool:      return GL_BOOL;
-		}
-
-		HZ_CORE_ASSERT(false, "Unknown ShaderDataType!");
-		return 0;
-	}
 
 	Application::Application()
 	{
@@ -46,46 +26,63 @@ namespace Hazel {
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 
-		// Vertex Array
-		glGenVertexArrays(1, &m_VertexArray);
-		glBindVertexArray(m_VertexArray);
-		
+		m_VertexArray.reset(VertexArray::Create());
+
 		// Vertex information
 		float vertices[3 * 7] = {
-			-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-			 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-			 0.0f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f
+			-0.5f, -0.5f, 0.0f, 0.8f, 0.2f, 0.8f, 1.0f,
+			 0.5f, -0.5f, 0.0f, 0.2f, 0.3f, 0.8f, 1.0f,
+			 0.0f,  0.5f, 0.0f, 0.8f, 0.8f, 0.2f, 1.0f
 		};
 
 		// using reset to set m_VertexBuffer pointer
 		m_VertexBuffer.reset(VertexBuffer::Create(vertices, sizeof(vertices)));
 		
-		
-		// the order of drawing triangles
-		// make sure it's counterclock
-		unsigned int indices[3] = {
-			0, 1, 2
-		};
-		m_IndexBuffer.reset(IndexBuffer::Create(indices, sizeof(indices)/sizeof(uint32_t)));
-
 		// set vertex layout
 		BufferLayout layout = {
 			{ShaderDataType::Float3, "a_Position"},
 			{ShaderDataType::Float4, "a_Color"}
 		};
 
-		uint32_t index = 0;
-		for (const auto& element : layout)
-		{
-			glEnableVertexAttribArray(index);
-			glVertexAttribPointer(index,
-				element.GetComponentCount(),
-				ShaderDataTypeToOpenGLBaseType(element.Type),
-				element.Normalized? GL_TRUE : GL_FALSE, 
-				layout.GetStride(),
-				(const void*)element.Offset);
-			index++;
-		}
+		m_VertexBuffer->SetLayout(layout);
+		m_VertexArray->AddVertexBuffer(m_VertexBuffer);
+		
+		// the order of drawing triangles
+		// make sure it's counterclockwise
+		uint32_t indices[3] = {
+			0, 1, 2
+		};
+		m_IndexBuffer.reset(IndexBuffer::Create(indices, sizeof(indices)/sizeof(uint32_t)));
+		m_VertexArray->SetIndexBuffer(m_IndexBuffer);
+
+		m_SquareArray.reset(VertexArray::Create());
+		// Square info
+		float squareVertices[4 * 7] = {
+			-0.5f,  0.5f, 0.0f, 0.8f, 0.2f, 0.8f, 1.0f,
+			-0.5f, -0.5f, 0.0f, 0.2f, 0.3f, 0.8f, 1.0f,
+			 0.5f, -0.5f, 0.0f, 0.8f, 0.8f, 0.2f, 1.0f,
+			 0.5f,  0.5f, 0.0f, 0.5f, 0.5f, 0.2f, 1.0f
+		};
+
+		std::shared_ptr<VertexBuffer> m_SquareBuffer;
+		m_SquareBuffer.reset(VertexBuffer::Create(squareVertices, sizeof(squareVertices)));
+
+		BufferLayout squareLayout = {
+			{ShaderDataType::Float3, "a_Position"},
+			{ShaderDataType::Float4, "a_Color"}
+		};
+
+		m_SquareBuffer->SetLayout(squareLayout);
+		m_SquareArray->AddVertexBuffer(m_SquareBuffer);
+
+		uint32_t squareIndices[6] = {
+			0, 1, 2, 2, 3 , 0
+		};
+
+		std::shared_ptr<IndexBuffer> m_SquareIB;
+		m_SquareIB.reset(IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t)));
+		m_SquareArray->SetIndexBuffer(m_SquareIB);
+		
 		
 		std::string vertexSrc = R"(
 			#version 330 core
@@ -117,6 +114,35 @@ namespace Hazel {
 
 		m_Shader.reset(new Shader(vertexSrc, fragmentSrc));
 
+		std::string squareVertexSrc = R"(
+			#version 330 core
+			
+			layout(location = 0) in vec3 a_Position;
+			layout(location = 1) in vec4 a_Color;			
+			
+			out vec4 v_Color;
+				
+			void main()
+			{
+				v_Color = a_Color;
+				gl_Position = vec4(a_Position, 1.0f);
+			}
+		)";
+
+		std::string squareFragmentSrc = R"(
+			#version 330 core
+			
+			layout(location = 0) out vec4 color;
+
+			in vec4 v_Color;			
+
+			void main()
+			{
+				color = v_Color;
+			}
+		)";
+
+		m_SquareShader.reset(new Shader(squareVertexSrc, squareFragmentSrc));
 	}
 
 	Application::~Application()
@@ -163,11 +189,15 @@ namespace Hazel {
 			glClearColor(0.1f, 0.1f, 0.1f, 1);
 			glClear(GL_COLOR_BUFFER_BIT);
 
+			m_SquareShader->Bind();
+			m_SquareArray->Bind();
+			glDrawElements(GL_TRIANGLES, m_SquareArray->GetIndexBuffer()->GetCount(), GL_UNSIGNED_INT, nullptr);
+
 			// bind shader
 			// befor draw elements
 			m_Shader->Bind();
-			glBindVertexArray(m_VertexArray);
-			glDrawElements(GL_TRIANGLES, m_IndexBuffer->GetCount(), GL_UNSIGNED_INT, nullptr);
+			m_VertexArray->Bind();
+			glDrawElements(GL_TRIANGLES, m_VertexArray->GetIndexBuffer()->GetCount() , GL_UNSIGNED_INT, nullptr);
 			
 			for (Layer* layer : m_LayerStack)
 				layer->OnUpdate();

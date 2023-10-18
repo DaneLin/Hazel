@@ -26,6 +26,9 @@ namespace Hazel {
 	class HAZEL_API Window
 	{
 	public:
+		// 定义别名 EventCallbackFn 用于代表一个特定类型的函数对象
+		// 指定函数签名：它应该接受一个Event类型的参数，并且返回类型为void
+
 		using EventCallbackFn = std::function<void(Event&)>;
 
 		virtual ~Window() {}
