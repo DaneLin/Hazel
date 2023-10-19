@@ -3,8 +3,7 @@
 
 
 #include "Hazel/Log.h"
-
-#include <glad/glad.h>
+#include "Hazel/Renderer/Renderer.h"
 
 #include "Input.h"
 
@@ -16,6 +15,7 @@ namespace Hazel {
 
 
 	Application::Application()
+		:m_Camera(-1.0f, 1.0f, -1.0f, 1.0f)
 	{
 		HZ_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
@@ -61,7 +61,7 @@ namespace Hazel {
 			-0.5f,  0.5f, 0.0f, 0.8f, 0.2f, 0.8f, 1.0f,
 			-0.5f, -0.5f, 0.0f, 0.2f, 0.3f, 0.8f, 1.0f,
 			 0.5f, -0.5f, 0.0f, 0.8f, 0.8f, 0.2f, 1.0f,
-			 0.5f,  0.5f, 0.0f, 0.5f, 0.5f, 0.2f, 1.0f
+			 0.5f,  0.5f, 0.0f, 0.1f, 0.1f, 0.1f, 1.0f
 		};
 
 		std::shared_ptr<VertexBuffer> m_SquareBuffer;
@@ -185,19 +185,21 @@ namespace Hazel {
 	{
 		while (m_Running)
 		{
-			// clean color buffer
-			glClearColor(0.1f, 0.1f, 0.1f, 1);
-			glClear(GL_COLOR_BUFFER_BIT);
+			RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
+			RenderCommand::Clear();
+
+			Renderer::BeginScene();
 
 			m_SquareShader->Bind();
-			m_SquareArray->Bind();
-			glDrawElements(GL_TRIANGLES, m_SquareArray->GetIndexBuffer()->GetCount(), GL_UNSIGNED_INT, nullptr);
+			Renderer::Submit(m_SquareArray);
 
-			// bind shader
-			// befor draw elements
 			m_Shader->Bind();
-			m_VertexArray->Bind();
-			glDrawElements(GL_TRIANGLES, m_VertexArray->GetIndexBuffer()->GetCount() , GL_UNSIGNED_INT, nullptr);
+			Renderer::Submit(m_VertexArray);
+
+			Renderer::EndScene();
+
+			//Multi-thread
+			//Renderer::Flush();
 			
 			for (Layer* layer : m_LayerStack)
 				layer->OnUpdate();
