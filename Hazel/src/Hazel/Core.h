@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #ifdef HZ_PLATFORM_WINDOWS
 #if HZ_DYNAMIC_LINK
 	#ifdef HZ_BUILD_DLL
@@ -15,12 +17,12 @@
 
 #endif // HZ_PLATFORM_WINDOWS
 
-#ifdef HZ_ENABLE_ASSERTS
-	#define HZ_ASSERT(x, ...) { if (!(x)) { HZ_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak();}}
-	#define HZ_CORE_ASSERT(x, ...) { if (!(x)) { HZ_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak();}}
+#ifdef HZ_DISABLE_ASSERTS
+#define HZ_ASSERT(x, ...)
+#define HZ_CORE_ASSERT(x, ...)
 #else
-	#define HZ_ASSERT(x, ...)
-	#define HZ_CORE_ASSERT(x, ...)
+#define HZ_ASSERT(x, ...) { if (!(x)) { HZ_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak();}}
+#define HZ_CORE_ASSERT(x, ...) { if (!(x)) { HZ_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak();}}
 #endif // HZ_ENABLE_ASSERTS
 
 
@@ -37,3 +39,14 @@ std::bind()接受一个可调用对象以及参数(如果有的话)，形成一个新的可调用对象
 std::placeholders代表占位符，表示在函数参数中占据的参数位置
 std::placeholders::_1中的_1表示新的可调用对象中的第一个参数
 */
+
+
+namespace Hazel
+{
+	template<typename T>
+	using Scope = std::unique_ptr<T>;
+
+
+	template<typename T>
+	using Ref = std::shared_ptr<T>;
+}

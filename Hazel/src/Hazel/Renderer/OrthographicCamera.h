@@ -19,6 +19,9 @@ namespace Hazel
 		const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
 		const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 		const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
+		const glm::vec3& GetFrontDirection() const { return m_FrontDirection; }
+		const glm::vec3& GetUpDirection() const { return m_UpDirection; }
+		inline float GetCameraSpeed() { return m_CameraSpeed; }
 
 	private:
 		void RecalculateViewMatrix();
@@ -28,8 +31,13 @@ namespace Hazel
 		glm::mat4 m_ViewMatrix;
 		glm::mat4 m_ViewProjectionMatrix;
 
-		glm::vec3 m_Position;
+		// self settings
+		glm::vec3 m_FrontDirection = { 0.0f, 0.0f, -1.0f };
+		glm::vec3 m_UpDirection = {0.0f, 1.0f, 0.0f};
+
+		glm::vec3 m_Position = { 0.0f, 0.0f, 0.0f };
 		float m_Rotation = 0.0f;
+		float m_CameraSpeed = 0.05f;
 	};
 
 }
