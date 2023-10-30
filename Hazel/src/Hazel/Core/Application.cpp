@@ -2,7 +2,7 @@
 #include "Application.h"
 
 
-#include "Hazel/Log.h"
+#include "Hazel/Core/Log.h"
 #include "Hazel/Renderer/Renderer.h"
 #include <thread>
 #include <chrono>
@@ -25,42 +25,39 @@ namespace Hazel {
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 
+		Renderer::Init();
+
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 	}
 
 	Application::~Application()
 	{
+		HZ_PROFILE_FUNCTION();
+
+		Renderer::Shutdown();
 	}
 
 	void Application::PushLayer(Layer* layer)
 	{
+		HZ_PROFILE_FUNCTION();
 		m_LayerStack.PushLayer(layer);
 		layer->OnAttach();
 	}
 
 	void Application::PushOverlay(Layer* layer)
 	{
+		HZ_PROFILE_FUNCTION();
 		m_LayerStack.PushOverlay(layer);
 		layer->OnAttach();
 	}
 
 	void Application::OnEvent(Event& e)
 	{
+		HZ_PROFILE_FUNCTION();
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
-
-		if (e.GetEventType() == EventType::KeyPressed)
-		{
-			auto tmp = (KeyPressedEvent&)e;
-			HZ_CORE_INFO("some key has been pressed!");
-		}
-		else if (e.GetEventType() == EventType::MouseMoved)
-		{
-			auto tmp = (MouseMovedEvent&)e;
-
-			HZ_CORE_INFO("mouse moved! {0}, {1}", tmp.GetX(), tmp.GetY());
-		}
+		dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
 
 		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
 		{
@@ -76,11 +73,28 @@ namespace Hazel {
 		return true;
 	}
 
+	bool Application::OnWindowResize(WindowResizeEvent& e)
+	{
+		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+		{
+			m_Minimized = true;
+			return false;
+		}
+
+		m_Minimized = false;
+		Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
+
+		return false;
+	}
+
 	void Application::Run()
 	{
+		HZ_PROFILE_FUNCTION();
+
 		float deltaTime = 0.001f;
 		while (m_Running)
 		{
+			HZ_PROFILE_SCOPE("Run loop");
 			float time = (float)glfwGetTime(); // Platform::GetTime()
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
@@ -89,13 +103,25 @@ namespace Hazel {
 			//Multi-thread
 			//Renderer::Flush();
 			
-			for (Layer* layer : m_LayerStack)
-				layer->OnUpdate(timestep);
+			if (!m_Minimized)
+			{
+				{
+					HZ_PROFILE_SCOPE("LayerStack OnUpdate");
+					for (Layer* layer : m_LayerStack)
+						layer->OnUpdate(timestep);
+				}
+				m_ImGuiLayer->Begin();
+				{
+					HZ_PROFILE_SCOPE("LayerStack OnImGuiRender");
+					for (Layer* layer : m_LayerStack)
+						layer->OnImGuiRender();
+				}
+				
+				m_ImGuiLayer->End();
+			}
 
-			m_ImGuiLayer->Begin();
-			for (Layer* layer : m_LayerStack)
-				layer->OnImGuiRender();
-			m_ImGuiLayer->End();
+
+			
 
 			m_Window->OnUpdate();
 
