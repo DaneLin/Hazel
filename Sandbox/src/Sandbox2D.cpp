@@ -19,32 +19,6 @@ void Sandbox2D::OnAttach()
 {
 	HZ_PROFILE_FUNCTION();
 	m_CheckerBoardTexture = Hazel::Texture2D::Create("assets/textures/Checkerboard.png");
-	//m_SquareVA = Hazel::VertexArray::Create();
-	//// Square info
-	//float squareVertices[4 * 3] = {
-	//	-0.5f, -0.5f, 0.0f, 
-	//	 0.5f, -0.5f, 0.0f, 
-	//	 0.5f,  0.5f, 0.0f, 
-	//	-0.5f, 0.5f, 0.0f, 
-	//};
-
-	//Hazel::Ref<Hazel::VertexBuffer> m_SquareBuffer;
-	//m_SquareBuffer = Hazel::VertexBuffer::Create(squareVertices, sizeof(squareVertices));
-
-	//Hazel::BufferLayout squareLayout = {
-	//	{ Hazel::ShaderDataType::Float3, "a_Position" },
-	//};
-
-	//m_SquareBuffer->SetLayout(squareLayout);
-	//m_SquareVA->AddVertexBuffer(m_SquareBuffer);
-
-	//uint32_t squareIndices[6] = { 0, 1, 2, 2, 3, 0 };
-
-	//Hazel::Ref<Hazel::IndexBuffer> m_SquareIB;
-	//m_SquareIB = Hazel::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t));
-	//m_SquareVA->SetIndexBuffer(m_SquareIB);
-
-	//m_FlatColorShader = Hazel::Shader::Create("assets/shaders/FlatColor.glsl");
 }
 
 void Sandbox2D::OnDetach()
@@ -61,6 +35,7 @@ void Sandbox2D::OnUpdate(Hazel::Timestep ts)
 		m_CameraController.OnUpdate(ts);
 	}
 	
+	Hazel::Renderer2D::ResetStats();
 	{
 		HZ_PROFILE_SCOPE("Renderer Setup");
 		Hazel::RenderCommand::SetClearColor({ 0.1f, 0.1f, 0.1f, 1 });
@@ -68,11 +43,27 @@ void Sandbox2D::OnUpdate(Hazel::Timestep ts)
 	}
 	
 	{
+
+		static float rotation = 0.0f;
+		rotation += ts * 50.0f;
+
 		HZ_PROFILE_SCOPE("Renderer Draw");
 		Hazel::Renderer2D::BeginScene(m_CameraController.GetCamera());
 		Hazel::Renderer2D::DrawQuad({ -1.0f, 0.0f }, { 0.8f,0.8f }, { 0.8f, 0.8f, 0.5f, 1.0f });
 		Hazel::Renderer2D::DrawQuad({ 0.5f, 0.5f }, { 1.0f,0.5f }, { 0.1f, 0.1f, 0.5f, 1.0f });
-		Hazel::Renderer2D::DrawQuad({ 0.0f, 0.0f, -0.1f }, { 10.0f, 10.0f }, m_CheckerBoardTexture);
+		Hazel::Renderer2D::DrawQuad({ 0.0f, 0.0f, -0.1f }, { 20.0f, 20.0f }, m_CheckerBoardTexture, 10.0f);
+		Hazel::Renderer2D::DrawRotatedQuad({ 2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f }, rotation, m_CheckerBoardTexture, 10.0f);
+		//Hazel::Renderer2D::EndScene();
+
+		//Hazel::Renderer2D::BeginScene(m_CameraController.GetCamera());
+		for (float y = -5.0f; y < 5.0f; y += 0.5f)
+		{
+			for (float x = -5.0f; x < 5.0f; x += 0.5f)
+			{
+				glm::vec4 color = { (x + 5.0f) / 10.0f,0.4f, (y + 5.0f) / 10.0f , 0.5f};
+				Hazel::Renderer2D::DrawQuad({ x, y }, { 0.45f, 0.45f }, color);
+			}
+		}
 		Hazel::Renderer2D::EndScene();
 	}
 }
@@ -81,6 +72,14 @@ void Sandbox2D::OnImGuiRender()
 {
 	HZ_PROFILE_FUNCTION();
 	ImGui::Begin("Setting");
+
+	auto stats = Hazel::Renderer2D::GetStats();
+	ImGui::Text("Renderer2D Stats:");
+	ImGui::Text("Draw Calls: %d", stats.DrawCalls);
+	ImGui::Text("Quads: %d", stats.QuadCount);
+	ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
+	ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
+
 	ImGui::ColorEdit4("Square Color", glm::value_ptr(m_SquareColor));
 	m_ProfileResults.clear();
 	ImGui::End();
