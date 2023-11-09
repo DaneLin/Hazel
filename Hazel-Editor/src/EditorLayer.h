@@ -34,7 +34,9 @@ namespace Hazel
 		Ref<SubTexture2D> m_RoleOneTexture;
 		Ref<SubTexture2D> m_GrassTexture;
 
-		glm::vec2 m_ViewportSize;
+		bool m_ViewportFocused = false;
+		bool m_ViewportHoverd = false;
+		glm::vec2 m_ViewportSize = { 0.0f, 0.0f };
 
 		//Framebuffer
 		Ref<Framebuffer> m_Framebuffer;
