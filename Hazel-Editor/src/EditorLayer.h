@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Hazel.h>
+#include "Panels/SceneHierarchyPanel.h"
 #include "imgui/imgui.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -40,6 +41,15 @@ namespace Hazel
 
 		//Framebuffer
 		Ref<Framebuffer> m_Framebuffer;
+
+		Ref<Scene> m_ActiveScene;
+		Entity m_SquareEntity;
+		Entity m_CameraEntity;
+		Entity m_SecondCamera;
+
+		SceneHierarchyPanel m_SceneHierarchyPanel;
+
+		bool b_PrimaryCamera;
 
 		struct ProfileResult
 		{
