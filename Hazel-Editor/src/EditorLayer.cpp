@@ -50,15 +50,15 @@ namespace Hazel
 
 		m_ActiveScene = CreateRef<Scene>();
 
-		auto square = m_ActiveScene->CreateEntity();
+		auto square = m_ActiveScene->CreateEntity("Square");
 		square.AddComponent<SpriteRendererComponent>(glm::vec4{ 0.0f, 1.0f, 0.0f, 1.0f });
 	
 		m_SquareEntity = square;
 
-		m_CameraEntity = m_ActiveScene->CreateEntity("Camera Entity");
+		m_CameraEntity = m_ActiveScene->CreateEntity("CameraA Entity");
 		m_CameraEntity.AddComponent<CameraComponent>();
 
-		m_SecondCamera = m_ActiveScene->CreateEntity("Click-Space Entity");
+		m_SecondCamera = m_ActiveScene->CreateEntity("CameraB Entity");
 		auto& cc = m_SecondCamera.AddComponent<CameraComponent>();
 		cc.Primary = false;
 
@@ -69,8 +69,8 @@ namespace Hazel
 			{
 				// test code
 				//std::cout << "CameraController::OnCreate" << std::endl;
-				auto& transform = GetComponent<TransformComponent>().Transform;
-				transform[3][0] = rand() % 10 - 5.0f;
+				auto& translation = GetComponent<TransformComponent>().Translation;
+				translation.x = rand() % 10 - 5.0f;
 			}
 
 			void OnDestroy()
@@ -81,17 +81,17 @@ namespace Hazel
 			void OnUpdate(Timestep ts)
 			{
 				//std::cout << "CameraController::OnUpdate" << ts << std::endl;
-				auto& transform = GetComponent<TransformComponent>().Transform;
+				auto& translation = GetComponent<TransformComponent>().Translation;
 				float speed = 5.0f;
 
 				if (Input::IsKeyPressed(HZ_KEY_A))
-					transform[3][0] -= speed * ts;
+					translation.x -= speed * ts;
 				if (Input::IsKeyPressed(HZ_KEY_D))
-					transform[3][0] += speed * ts;
+					translation.x += speed * ts;
 				if (Input::IsKeyPressed(HZ_KEY_W))
-					transform[3][1] += speed * ts;
+					translation.y += speed * ts;
 				if (Input::IsKeyPressed(HZ_KEY_S))
-					transform[3][1] -= speed * ts;
+					translation.y -= speed * ts;
 			}
 		};
 
@@ -110,8 +110,8 @@ namespace Hazel
 	{
 		HZ_PROFILE_FUNCTION();
 		
-		m_CameraEntity.GetComponent<CameraComponent>().Camera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
-		m_SecondCamera.GetComponent<CameraComponent>().Camera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
+		m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+		//m_CameraEntity.GetComponent<CameraComponent>().Camera.SetViewportSize(m_ViewportSize.x, m_ViewportSize.y);
 		{
 			HZ_PROFILE_SCOPE("Sandbox2D::OnUpdate");
 			//Update
@@ -128,7 +128,6 @@ namespace Hazel
 		}
 
 		{
-
 			static float rotation = 0.0f;
 			rotation += ts * 50.0f;
 
@@ -137,42 +136,6 @@ namespace Hazel
 
 
 			m_ActiveScene->OnUpdate(ts);
-			/*Renderer2D::DrawQuad({ -1.0f, 0.0f }, { 0.8f,0.8f }, { 0.8f, 0.8f, 0.5f, 1.0f });
-			Renderer2D::DrawQuad({ 0.5f, 0.5f }, { 1.0f,0.5f }, { 0.1f, 0.1f, 0.5f, 1.0f });
-			Renderer2D::DrawQuad({ 0.0f, 0.0f, -0.1f }, { 20.0f, 20.0f }, m_CheckerBoardTexture, 10.0f);
-			Renderer2D::DrawRotatedQuad({ 2.0f, 0.0f, 0.0f }, { 1.0f, 1.0f }, glm::radians(rotation), m_CheckerBoardTexture, 10.0f);
-			Renderer2D::DrawQuad({ 0.0f, 0.0f, 1.0f }, { 1.0f, 2.0f }, m_RoleOneTexture);*/
-			//Renderer2D::EndScene();
-
-			//Renderer2D::BeginScene(m_CameraController.GetCamera());
-			/*for (float y = -5.0f; y < 5.0f; y += 0.5f)
-			{
-				for (float x = -5.0f; x < 5.0f; x += 0.5f)
-				{
-					glm::vec4 color = { (x + 5.0f) / 10.0f,0.4f, (y + 5.0f) / 10.0f , 0.5f};
-					Renderer2D::DrawQuad({ x, y }, { 0.45f, 0.45f }, color);
-				}
-			}*/
-
-
-			/*for (uint32_t y = 0; y < m_MapHeight; y++)
-			{
-				for (uint32_t x = 0; x < m_MapWidth; x++)
-				{
-					char tileType = s_MapTiles[x + y * m_MapWidth];
-					Ref<SubTexture2D> texture;
-					if (s_TextureMap.find(tileType) != s_TextureMap.end())
-					{
-						texture = s_TextureMap[tileType];
-					}
-					else
-					{
-						texture = m_RoleOneTexture;
-					}
-
-					Renderer2D::DrawQuad({ x - m_MapWidth / 2.0f, y - m_MapHeight / 2.0f, 0.5f }, { 1.0f, 1.0f }, texture);
-				}
-			}*/
 
 			//Renderer2D::EndScene();
 			m_Framebuffer->UnBind();
@@ -272,35 +235,6 @@ namespace Hazel
 		ImGui::Text("Quads: %d", stats.QuadCount);
 		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
 		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
-
-		if (m_SquareEntity)
-		{
-			ImGui::Separator();
-			auto& tag = m_SquareEntity.GetComponent<TagComponent>().Tag;
-			ImGui::Text("%s", tag.c_str());
-			//m_SquareColor = m_SquareEntity.GetComponent<SpriteRendererComponent>().Color;
-			auto& squareColor = m_SquareEntity.GetComponent<SpriteRendererComponent>().Color;
-			ImGui::ColorEdit4("Square Color", glm::value_ptr(squareColor));
-			ImGui::Separator();
-		}
-		
-		ImGui::Separator();
-		ImGui::DragFloat3("Camera Transform",
-		glm::value_ptr(m_CameraEntity.GetComponent<TransformComponent>().Transform[3]));
-		ImGui::Separator();
-
-		if (ImGui::Checkbox("Camera_A", &b_PrimaryCamera))
-		{
-			m_CameraEntity.GetComponent<CameraComponent>().Primary = b_PrimaryCamera;
-			m_SecondCamera.GetComponent<CameraComponent>().Primary = !b_PrimaryCamera;
-		}
-
-		{
-			auto& camera = m_SecondCamera.GetComponent<CameraComponent>().Camera;
-			float orthoSize = camera.GetOrthographicSize();
-			if (ImGui::DragFloat("Second Camera Ortho Size", &orthoSize))
-				camera.SetOrthographicSize(orthoSize);
-		}
 
 		m_SceneHierarchyPanel.OnImGuiRender();
 			
